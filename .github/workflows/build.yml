@@ -18,22 +18,24 @@ jobs:
       # 1. Cria a estrutura do Android dinamicamente no runner
       - run: flutter create --project-name=banco_dinamico --platforms=android .
 
-      # 2. Injeta a correção usando packagingOptions no build.gradle gerado
+      # 2. Injeta o packagingOptions de forma cirúrgica logo acima do defaultConfig
       - name: Patch android/app/build.gradle
         run: |
           python3 -c '
           path = "android/app/build.gradle"
           with open(path, "r") as f:
               content = f.read()
-          target = "android {"
-          replacement = "android {\n    packagingOptions {\n        resources.excludes += \"META-INF/*.kotlin_module\"\n    }"
+          target = "    defaultConfig {"
+          replacement = "    packagingOptions {\n        resources.excludes += \"META-INF/*.kotlin_module\"\n    }\n\n    defaultConfig {"
           if target in content:
               content = content.replace(target, replacement, 1)
               with open(path, "w") as f:
                   f.write(content)
+          else:
+              print("AVISO: Alvo defaultConfig não encontrado!")
           '
 
-      # 3. Obtém dependências e compila o APK
+      # 3. Obtém dependências e compila o APK sem conflitos
       - run: flutter pub get
       - run: flutter build apk --release
 

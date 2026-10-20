@@ -126,7 +126,7 @@ class _ListasPageState extends State<ListasPage> {
 }
 
 // ===========================================================================
-// 2. Página da Grade (Colunas Globais + Linhas de Entidades)
+// 2. Página da Grade (Colunas Globais + Linhas de Entidades + Botão PDF)
 // ===========================================================================
 
 class DetalheListaPage extends StatefulWidget {
@@ -160,7 +160,8 @@ class _DetalheListaPageState extends State<DetalheListaPage> {
             TextField(
               controller: nomeCtrl,
               autofocus: true,
-              decoration: const InputDecoration(labelText: 'Nome da Coluna (ex: Telefone, Idade)'),
+              decoration: const InputDecoration(
+                  labelText: 'Nome da Coluna (ex: Telefone, Idade)'),
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<TipoAtributo>(
@@ -169,7 +170,8 @@ class _DetalheListaPageState extends State<DetalheListaPage> {
               items: TipoAtributo.values
                   .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
                   .toList(),
-              onChanged: (v) => setStateDialog(() => tipoSelecionado = v ?? tipoSelecionado),
+              onChanged: (v) =>
+                  setStateDialog(() => tipoSelecionado = v ?? tipoSelecionado),
             ),
           ]),
           actions: [
@@ -189,8 +191,8 @@ class _DetalheListaPageState extends State<DetalheListaPage> {
     );
 
     if (r == true) {
-      await widget.repo.adicionarColuna(widget.lista.id, nomeCtrl.text, tipoSelecionado);
-      // Atualiza o estado local da lista se necessário
+      await widget.repo.adicionarColuna(
+          widget.lista.id, nomeCtrl.text, tipoSelecionado);
       setState(() {});
     }
   }
@@ -230,55 +232,79 @@ class _DetalheListaPageState extends State<DetalheListaPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: Text(widget.lista.titulo),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.view_column),
-              tooltip: 'Gerir Colunas',
-              onPressed: _adicionarColunaDialog,
-            ),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _adicionarEntidadeDialog,
-          tooltip: 'Adicionar Linha',
-          child: const Icon(Icons.person_add),
-        ),
-        body: StreamBuilder<List<Entidade>>(
-          stream: _entidadesStream,
-          builder: (context, snap) {
-            if (!snap.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final entidades = snap.data!;
-            if (entidades.isEmpty) {
-              return const Center(
-                  child: Text('Nenhum item na grade. Adicione colunas e linhas.'));
-            }
+  Widget build(BuildContext context) => StreamBuilder<List<Entidade>>(
+        stream: _entidadesStream,
+        builder: (context, snap) {
+          final entidades = snap.data ?? [];
 
-            return ListView.builder(
-              itemCount: entidades.length,
-              itemBuilder: (context, i) {
-                final ent = entidades[i];
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    title: Text(ent.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text('Valores preenchidos: ${ent.valoresAtributos.length}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => widget.repo.removerEntidade(ent.id),
-                    ),
-                    onTap: () {
-                      // Aqui podemos abrir os detalhes da linha ou edição de valores por coluna
-                    },
-                  ),
-                );
-              },
-            );
-          },
-        ),
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(widget.lista.titulo),
+              actions: [
+                // Botão de Relatório PDF Integrado
+                IconButton(
+                  icon: const Icon(Icons.print),
+                  tooltip: 'Gerir Relatório PDF / Imprimir',
+                  onPressed: () async {
+                    if (entidades.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text(
+                                'A lista está vazia. Adicione itens antes de exportar.')),
+                      );
+                      return;
+                    }
+                    await PdfRelatorioService.gerarEImprimirRelatorio(
+                      context,
+                      lista: widget.lista,
+                      entidades: entidades,
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.view_column),
+                  tooltip: 'Gerir Colunas',
+                  onPressed: _adicionarColunaDialog,
+                ),
+              ],
+            ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: _adicionarEntidadeDialog,
+              tooltip: 'Adicionar Linha',
+              child: const Icon(Icons.person_add),
+            ),
+            body: snap.connectionState == ConnectionState.waiting
+                ? const Center(child: CircularProgressIndicator())
+                : entidades.isEmpty
+                    ? const Center(
+                        child: Text(
+                            'Nenhum item na grade. Adicione colunas e linhas.'))
+                    : ListView.builder(
+                        itemCount: entidades.length,
+                        itemBuilder: (context, i) {
+                          final ent = entidades[i];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            child: ListTile(
+                              title: Text(ent.nome,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              subtitle: Text(
+                                  'Valores preenchidos: ${ent.valoresAtributos.length}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                onPressed: () =>
+                                    widget.repo.removerEntidade(ent.id),
+                              ),
+                              onTap: () {
+                                // Futura edição de colunas individuais por linha
+                              },
+                            ),
+                          );
+                        },
+                      ),
+          );
+        },
       );
 }

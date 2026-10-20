@@ -407,7 +407,7 @@ class _AtributoDialogState extends State<_AtributoDialog> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<TipoAtributo>(
-              initialValue: _tipo,
+              value: _tipo,
               decoration: const InputDecoration(labelText: 'Tipo'),
               items: [
                 for (final t in TipoAtributo.values)

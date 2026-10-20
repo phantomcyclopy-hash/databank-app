@@ -18,30 +18,12 @@ jobs:
       # 1. Cria a estrutura do Android dinamicamente no runner
       - run: flutter create --project-name=banco_dinamico --platforms=android .
 
-      # 2. Insere o packagingOptions logo no início do bloco android do build.gradle
-      - name: Inject packagingOptions into build.gradle
+      # 2. Força a versão unificada do Kotlin no gradle.properties para evitar conflitos de duplicados
+      - name: Force unified Kotlin version in gradle.properties
         run: |
-          python3 -c '
-          path = "android/app/build.gradle"
-          with open(path, "r") as f:
-              lines = f.readlines()
-          
-          new_lines = []
-          inserted = False
-          for line in lines:
-              new_lines.append(line)
-              if "android {" in line and not inserted:
-                  new_lines.append("    packagingOptions {\n")
-                  new_lines.append("        exclude '\''META-INF/versions/9/OSGI-INF/MANIFEST.MF'\''\n")
-                  new_lines.append("        exclude '\''META-INF/*.kotlin_module'\''\n")
-                  new_lines.append("    }\n")
-                  inserted = True
-                  
-          with open(path, "w") as f:
-              f.writelines(new_lines)
-          '
+          echo "kotlin.version=1.8.22" >> android/gradle.properties
 
-      # 3. Obtém dependências e compila o APK
+      # 3. Obtém dependências e compila o APK limpo
       - run: flutter pub get
       - run: flutter build apk --release
 

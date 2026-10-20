@@ -15,9 +15,10 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      # Removemos o 'flutter create' para não substituir o teu main.dart!
+      # Cria apenas os ficheiros de plataforma se eles não existirem (sem tocar no teu lib/main.dart)
+      - run: flutter create . --platforms=android --org com.banco.dinamico
 
-      # Insere a resolução global de dependências para o Kotlin 1.8.22 diretamente no build.gradle existente
+      # Insere a resolução global de dependências para o Kotlin 1.8.22 no android/build.gradle gerado
       - name: Fix Kotlin stdlib conflict safely in android/build.gradle
         run: |
           python3 -c '
@@ -42,7 +43,7 @@ jobs:
               f.write(content)
           '
 
-      # Compila o APK de Release mantendo o teu main.dart original
+      # Compila o APK de Release
       - run: flutter pub get
       - run: flutter build apk --release
 

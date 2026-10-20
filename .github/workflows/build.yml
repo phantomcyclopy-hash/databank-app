@@ -18,12 +18,42 @@ jobs:
       # 1. Cria a estrutura do Android dinamicamente no runner
       - run: flutter create --project-name=banco_dinamico --platforms=android .
 
-      # 2. Força a versão unificada do Kotlin no gradle.properties para evitar conflitos de duplicados
-      - name: Force unified Kotlin version in gradle.properties
+      # 2. Injeta a regra global para eliminar o conflito de kotlin-stdlib no android/build.gradle
+      - name: Fix Kotlin stdlib conflict in android/build.gradle
         run: |
-          echo "kotlin.version=1.8.22" >> android/gradle.properties
+          python3 -c '
+          path = "android/build.gradle"
+          with open(path, "r") as f:
+              content = f.read()
+          
+          # Adiciona regra de resolução de conflitos do Kotlin no bloco allprojects/subprojects
+          fix_block = """
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty("android")) {
+                      project.android {
+                          if (namespace == null) {
+                              namespace project.group
+                          }
+                      }
+                  }
+              }
+              configurations.all {
+                  resolutionStrategy {
+                      force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
+                      force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
+                      force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+                  }
+              }
+          }
+          """
+          
+          content = content + "\n" + fix_block
+          with open(path, "w") as f:
+              f.write(content)
+          '
 
-      # 3. Obtém dependências e compila o APK limpo
+      # 3. Obtém dependências e compila o APK sem erros
       - run: flutter pub get
       - run: flutter build apk --release
 

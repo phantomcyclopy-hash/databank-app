@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 
 import 'models.dart';
 import 'repository.dart';
+import 'pdf_helper.dart';          // Serviço de PDF que criámos
+import 'import_export_helper.dart'; // Serviço de Importação/Exportação JSON que criámos
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +25,7 @@ class App extends StatelessWidget {
 }
 
 // ===========================================================================
-// 1. Página Inicial: Gestão de Múltiplas Listas
+// 1. Página Inicial: Gestão de Múltiplas Listas (Com Botão de Importar)
 // ===========================================================================
 
 class ListasPage extends StatefulWidget {
@@ -82,7 +84,17 @@ class _ListasPageState extends State<ListasPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Minhas Listas e Grades')),
+        appBar: AppBar(
+          title: const Text('Minhas Listas e Grades'),
+          actions: [
+            // Botão para importar lista de um ficheiro JSON
+            IconButton(
+              icon: const Icon(Icons.file_upload_outlined),
+              tooltip: 'Importar Lista de Ficheiro',
+              onPressed: () => ImportExportService.importarLista(context, widget.repo),
+            ),
+          ],
+        ),
         floatingActionButton: FloatingActionButton(
           onPressed: _criarListaDialog,
           tooltip: 'Nova Lista',
@@ -126,7 +138,7 @@ class _ListasPageState extends State<ListasPage> {
 }
 
 // ===========================================================================
-// 2. Página da Grade (Colunas Globais + Linhas de Entidades + Botão PDF)
+// 2. Página da Grade (Colunas, Linhas, PDF e Exportação de Ficheiro)
 // ===========================================================================
 
 class DetalheListaPage extends StatefulWidget {
@@ -241,10 +253,16 @@ class _DetalheListaPageState extends State<DetalheListaPage> {
             appBar: AppBar(
               title: Text(widget.lista.titulo),
               actions: [
-                // Botão de Relatório PDF Integrado
+                // 1. Botão de Exportar Ficheiro JSON (Backup)
+                IconButton(
+                  icon: const Icon(Icons.share),
+                  tooltip: 'Exportar / Fazer Backup da Lista',
+                  onPressed: () => ImportExportService.exportarLista(context, widget.lista, widget.repo),
+                ),
+                // 2. Botão de Gerar Relatório PDF / Imprimir
                 IconButton(
                   icon: const Icon(Icons.print),
-                  tooltip: 'Gerir Relatório PDF / Imprimir',
+                  tooltip: 'Gerar Relatório PDF / Imprimir',
                   onPressed: () async {
                     if (entidades.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -261,6 +279,7 @@ class _DetalheListaPageState extends State<DetalheListaPage> {
                     );
                   },
                 ),
+                // 3. Botão de Gerir Colunas da Grade
                 IconButton(
                   icon: const Icon(Icons.view_column),
                   tooltip: 'Gerir Colunas',
@@ -298,7 +317,7 @@ class _DetalheListaPageState extends State<DetalheListaPage> {
                                     widget.repo.removerEntidade(ent.id),
                               ),
                               onTap: () {
-                                // Futura edição de colunas individuais por linha
+                                // Aqui podes implementar o pop-up para preencher os valores das colunas desta linha
                               },
                             ),
                           );

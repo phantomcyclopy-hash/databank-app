@@ -15,8 +15,8 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      # Cria os ficheiros nativos do Android forçando o nome de pacote válido
-      - run: flutter create --project-name=databank_app --platforms=android .
+      # Cria a estrutura do Android usando o nome exato do teu pubspec.yaml
+      - run: flutter create --project-name=banco_dinamico --platforms=android .
 
       - run: flutter pub get
       - run: flutter build apk --release

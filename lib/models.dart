@@ -3,14 +3,22 @@ class ColunaEspecificacao {
   String nome;
   String tipo; // 'texto', 'numero', 'checkbox'
 
-  ColunaEspecificacao({required this.id, required this.nome, this.tipo = 'texto'});
+  ColunaEspecificacao({
+    required this.id,
+    required this.nome,
+    this.tipo = 'texto',
+  });
 
-  Map<String, dynamic> toJson() => {'id': id, 'nome': nome, 'tipo': tipo};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'nome': nome,
+        'tipo': tipo,
+      };
 
   factory ColunaEspecificacao.fromJson(Map<String, dynamic> json) {
     return ColunaEspecificacao(
-      id: json['id'],
-      nome: json['nome'],
+      id: json['id'] ?? '',
+      nome: json['nome'] ?? '',
       tipo: json['tipo'] ?? 'texto',
     );
   }
@@ -20,17 +28,26 @@ class Entidade {
   String id;
   Map<String, String> valores;
 
-  Entidade({required this.id, required this.valores});
+  Entidade({
+    required this.id,
+    required this.valores,
+  });
 
   Entidade copiar() {
-    return Entidade(id: id, valores: Map.from(valores));
+    return Entidade(
+      id: id,
+      valores: Map<String, String>.from(valores),
+    );
   }
 
-  Map<String, dynamic> toJson() => {'id': id, 'valores': valores};
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'valores': valores,
+      };
 
   factory Entidade.fromJson(Map<String, dynamic> json) {
     return Entidade(
-      id: json['id'],
+      id: json['id'] ?? '',
       valores: Map<String, String>.from(json['valores'] ?? {}),
     );
   }
@@ -76,7 +93,7 @@ class ListaEntidades {
 
   factory ListaEntidades.fromJson(Map<String, dynamic> json) {
     return ListaEntidades(
-      id: json['id'],
+      id: json['id'] ?? '',
       titulo: json['titulo'] ?? '',
       mostrarData: json['mostrarData'] ?? true,
       formatoData: json['formatoData'] ?? 'dd/mm/aaaa',

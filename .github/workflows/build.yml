@@ -18,25 +18,30 @@ jobs:
       # 1. Cria a estrutura do Android dinamicamente no runner
       - run: flutter create --project-name=banco_dinamico --platforms=android .
 
-      # 2. Adiciona a propriedade no gradle.properties para ignorar duplicados do Kotlin
-      - name: Fix Kotlin duplicates in gradle.properties
+      # 2. Insere o packagingOptions logo no início do bloco android do build.gradle
+      - name: Inject packagingOptions into build.gradle
         run: |
-          echo "android.suppressUnsupportedCompileSdk=34" >> android/gradle.properties
-          echo "android.enableR8.fullMode=false" >> android/gradle.properties
-          echo "kotlin.code.style=official" >> android/gradle.properties
+          python3 -c '
+          path = "android/app/build.gradle"
+          with open(path, "r") as f:
+              lines = f.readlines()
+          
+          new_lines = []
+          inserted = False
+          for line in lines:
+              new_lines.append(line)
+              if "android {" in line and not inserted:
+                  new_lines.append("    packagingOptions {\n")
+                  new_lines.append("        exclude '\''META-INF/versions/9/OSGI-INF/MANIFEST.MF'\''\n")
+                  new_lines.append("        exclude '\''META-INF/*.kotlin_module'\''\n")
+                  new_lines.append("    }\n")
+                  inserted = True
+                  
+          with open(path, "w") as f:
+              f.writelines(new_lines)
+          '
 
-      # 3. Adiciona a regra de exclusão diretamente no nível de dependências do build.gradle de app
-      - name: Append packaging options to build.gradle
-        run: |
-          echo "" >> android/app/build.gradle
-          echo "android {" >> android/app/build.gradle
-          echo "    packagingOptions {" >> android/app/build.gradle
-          echo "        exclude 'META-INF/*.kotlin_module'" >> android/app/build.gradle
-          echo "        exclude 'META-INF/core_release.kotlin_module'" >> android/app/build.gradle
-          echo "    }" >> android/app/build.gradle
-          echo "}" >> android/app/build.gradle
-
-      # 4. Obtém dependências e compila o APK
+      # 3. Obtém dependências e compila o APK
       - run: flutter pub get
       - run: flutter build apk --release
 

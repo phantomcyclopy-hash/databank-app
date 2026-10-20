@@ -18,7 +18,7 @@ jobs:
       # 1. Cria a estrutura do Android dinamicamente no runner
       - run: flutter create --project-name=banco_dinamico --platforms=android .
 
-      # 2. Injeta a correção de conflito do Kotlin no build.gradle gerado
+      # 2. Injeta a correção usando packagingOptions no build.gradle gerado
       - name: Patch android/app/build.gradle
         run: |
           python3 -c '
@@ -26,14 +26,14 @@ jobs:
           with open(path, "r") as f:
               content = f.read()
           target = "android {"
-          replacement = "android {\n    packaging {\n        resources.excludes.add(\"META-INF/*.kotlin_module\")\n    }"
+          replacement = "android {\n    packagingOptions {\n        resources.excludes += \"META-INF/*.kotlin_module\"\n    }"
           if target in content:
               content = content.replace(target, replacement, 1)
               with open(path, "w") as f:
                   f.write(content)
           '
 
-      # 3. Obtém dependências e compita o APK
+      # 3. Obtém dependências e compila o APK
       - run: flutter pub get
       - run: flutter build apk --release
 

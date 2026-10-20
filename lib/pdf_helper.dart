@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material;
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,52 +7,50 @@ import 'models.dart';
 
 class PdfRelatorioService {
   static Future<void> gerarEImprimirRelatorio(
-    BuildContext context, {
+    material.BuildContext context, {
     required ListaEntidades lista,
     required List<Entidade> entidades,
   }) async {
-    // Controladores para o diálogo de customização
-    final tituloCtrl = TextEditingController(text: lista.titulo);
-    final comentarioCtrl = TextEditingController();
+    final tituloCtrl = material.TextEditingController(text: lista.titulo);
+    final comentarioCtrl = material.TextEditingController();
     bool incluirDataHora = true;
 
-    // 1. Janela de diálogo para customizar o relatório antes de exportar
-    final confirmar = await showDialog<bool>(
+    final confirmar = await material.showDialog<bool>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Configurar Relatório PDF'),
-          content: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(
+      builder: (context) => material.StatefulBuilder(
+        builder: (context, setStateDialog) => material.AlertDialog(
+          title: const material.Text('Configurar Relatório PDF'),
+          content: material.SingleChildScrollView(
+            child: material.Column(mainAxisSize: material.MainAxisSize.min, children: [
+              material.TextField(
                 controller: tituloCtrl,
-                decoration: const InputDecoration(labelText: 'Título do Relatório'),
+                decoration: const material.InputDecoration(labelText: 'Título do Relatório'),
               ),
-              const SizedBox(height: 12),
-              TextField(
+              const material.SizedBox(height: 12),
+              material.TextField(
                 controller: comentarioCtrl,
                 maxLines: 3,
-                decoration: const InputDecoration(
+                decoration: const material.InputDecoration(
                   labelText: 'Comentário / Observações (Opcional)',
-                  border: OutlineInputBorder(),
+                  border: material.OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                title: const Text('Incluir Data, Hora e Ano no topo'),
+              const material.SizedBox(height: 12),
+              material.SwitchListTile(
+                title: const material.Text('Incluir Data, Hora e Ano no topo'),
                 value: incluirDataHora,
                 onChanged: (v) => setStateDialog(() => incluirDataHora = v),
               ),
             ]),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancelar'),
+            material.TextButton(
+              onPressed: () => material.Navigator.pop(context, false),
+              child: const material.Text('Cancelar'),
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Gerar e Imprimir / Partilhar'),
+            material.FilledButton(
+              onPressed: () => material.Navigator.pop(context, true),
+              child: const material.Text('Gerar e Imprimir / Partilhar'),
             ),
           ],
         ),
@@ -61,16 +59,14 @@ class PdfRelatorioService {
 
     if (confirmar != true) return;
 
-    // 2. Construção do documento PDF
     final pdf = pw.Document();
     final agoraStr = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
 
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4.landscape, // Formato paisagem ótimo para grades
+        pageFormat: PdfPageFormat.a4.landscape,
         margin: const pw.EdgeInsets.all(24),
         build: (pw.Context context) => [
-          // Cabeçalho
           pw.Header(
             level: 0,
             child: pw.Row(
@@ -87,7 +83,7 @@ class PdfRelatorioService {
                       pw.SizedBox(height: 4),
                       pw.Text(
                         comentarioCtrl.text,
-                        style: const TextStyle(fontSize: 12, color: PdfColors.grey700),
+                        style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
                       ),
                     ],
                   ],
@@ -95,14 +91,12 @@ class PdfRelatorioService {
                 if (incluirDataHora)
                   pw.Text(
                     'Gerado em: $agoraStr',
-                    style: const TextStyle(fontSize: 10, color: PdfColors.grey600),
+                    style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600),
                   ),
               ],
             ),
           ),
           pw.SizedBox(height: 16),
-
-          // Tabela Estilo Grade
           pw.Table.fromTextArray(
             headers: [
               'Nome / Item',
@@ -128,7 +122,6 @@ class PdfRelatorioService {
       ),
     );
 
-    // 3. Abre o painel nativo de impressão / partilha do dispositivo (Android / Windows / etc.)
     await Printing.layoutPdf(
       onLayout: (PdfPageFormat format) async => pdf.save(),
       name: '${lista.titulo}_relatorio.pdf',

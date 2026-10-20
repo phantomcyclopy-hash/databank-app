@@ -15,10 +15,9 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      # 1. Cria a estrutura do Android dinamicamente
-      - run: flutter create --project-name=banco_dinamico --platforms=android .
+      # Removemos o 'flutter create' para não substituir o teu main.dart!
 
-      # 2. Insere a resolução global de dependências para o Kotlin 1.8.22
+      # Insere a resolução global de dependências para o Kotlin 1.8.22 diretamente no build.gradle existente
       - name: Fix Kotlin stdlib conflict safely in android/build.gradle
         run: |
           python3 -c '
@@ -43,7 +42,7 @@ jobs:
               f.write(content)
           '
 
-      # 3. Compila o APK de Release
+      # Compila o APK de Release mantendo o teu main.dart original
       - run: flutter pub get
       - run: flutter build apk --release
 

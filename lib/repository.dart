@@ -7,6 +7,8 @@ import 'package:sembast/sembast_io.dart';
 
 import 'models.dart';
 
+int _ms(DateTime d) => d.toUtc().millisecondsSinceEpoch;
+
 abstract class AppRepository {
   // Gestão de Listas
   Stream<List<ListaEntidades>> observarListas();

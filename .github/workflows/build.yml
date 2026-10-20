@@ -18,17 +18,25 @@ jobs:
       # 1. Cria a estrutura do Android dinamicamente no runner
       - run: flutter create --project-name=banco_dinamico --platforms=android .
 
-      # 2. Adiciona a regra de exclusão do Kotlin diretamente no final do build.gradle
-      - name: Patch android/app/build.gradle
+      # 2. Adiciona a propriedade no gradle.properties para ignorar duplicados do Kotlin
+      - name: Fix Kotlin duplicates in gradle.properties
+        run: |
+          echo "android.suppressUnsupportedCompileSdk=34" >> android/gradle.properties
+          echo "android.enableR8.fullMode=false" >> android/gradle.properties
+          echo "kotlin.code.style=official" >> android/gradle.properties
+
+      # 3. Adiciona a regra de exclusão diretamente no nível de dependências do build.gradle de app
+      - name: Append packaging options to build.gradle
         run: |
           echo "" >> android/app/build.gradle
           echo "android {" >> android/app/build.gradle
           echo "    packagingOptions {" >> android/app/build.gradle
-          echo "        resources.excludes += \"META-INF/*.kotlin_module\"" >> android/app/build.gradle
+          echo "        exclude 'META-INF/*.kotlin_module'" >> android/app/build.gradle
+          echo "        exclude 'META-INF/core_release.kotlin_module'" >> android/app/build.gradle
           echo "    }" >> android/app/build.gradle
           echo "}" >> android/app/build.gradle
 
-      # 3. Obtém dependências e compila o APK sem conflitos
+      # 4. Obtém dependências e compila o APK
       - run: flutter pub get
       - run: flutter build apk --release
 

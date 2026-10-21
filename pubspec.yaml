@@ -1,36 +1,30 @@
-name: Build IBMMKAR App
+name: databank
+description: Banco de dados de membros da igreja IBMMKAR.
+publish_to: none
 
-on:
-  push:
-    branches: [ main ]
+environment:
+  sdk: ">=3.3.0 <4.0.0"
 
-jobs:
-  build-android:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.6'
-          channel: 'stable'
-      - run: flutter pub get
-      - run: flutter build apk --release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: IBMMKAR-Android-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
+dependencies:
+  flutter:
+    sdk: flutter
+  sembast: ^3.7.0
+  path_provider: ^2.1.0
+  path: ^1.9.0
+  uuid: ^4.4.0
+  intl: ">=0.19.0 <1.0.0"
+  pdf: ^3.10.4
+  printing: ^5.11.1
+  file_picker: ^8.0.0
+  image_picker: ^1.0.7
+  share_plus: ^9.0.0
 
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.19.6'
-          channel: 'stable'
-      - run: flutter pub get
-      - run: flutter build windows --release
-      - uses: actions/upload-artifact@v4
-        with:
-          name: IBMMKAR-Windows-EXE
-          path: build/windows/x64/runner/Release/
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/app_icon.png

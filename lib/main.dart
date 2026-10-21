@@ -1,9 +1,12 @@
+import 'dart00:00:00.000'; // reservado
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 import 'models.dart';
 
 void main() async {
@@ -81,27 +84,127 @@ class _ListasPageState extends State<ListasPage> {
   final List<ListaEntidades> _listas = [];
   final Uuid _uuid = const Uuid();
 
-  Color _obterCorTema(String tema) {
-    switch (tema) {
-      case 'verde':
-        return Colors.teal;
-      case 'roxo':
-        return Colors.deepPurple;
-      case 'cinza':
-        return Colors.blueGrey;
-      case 'laranja':
-        return Colors.deepOrange;
-      case 'rosa':
-        return Colors.pink;
-      case 'azul':
-      default:
-        return Colors.blue;
+  Color _converterHexParaColor(String hex) {
+    try {
+      String cleanHex = hex.replaceAll('#', '').trim();
+      if (cleanHex.length == 6) {
+        cleanHex = 'FF$cleanHex';
+      }
+      return Color(int.parse('0x$cleanHex'));
+    } catch (_) {
+      return Colors.blue;
     }
+  }
+
+  String _converterColorParaHex(Color color) {
+    return '#${color.value.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}';
+  }
+
+  void _abrirSeletorCorHex(Color corAtual, Function(Color) onColorSelected) {
+    Color tempColor = corAtual;
+    final hexController = TextEditingController(text: _converterColorParaHex(corAtual));
+
+    final List<Color> coresRapidas = [
+      Colors.blue,
+      Colors.indigo,
+      Colors.teal,
+      Colors.green,
+      Colors.amber,
+      Colors.deepOrange,
+      Colors.red,
+      Colors.pink,
+      Colors.purple,
+      Colors.blueGrey,
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setPickerState) {
+          return AlertDialog(
+            title: const Text('Escolher Cor do Tema'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: tempColor,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: hexController,
+                    decoration: const InputDecoration(
+                      labelText: 'Código Hexadecimal / RGB',
+                      hintText: '#FF0000 ou #00FF00',
+                      prefixIcon: Icon(Icons.color_lens),
+                    ),
+                    onChanged: (val) {
+                      if (val.length == 7 || val.length == 9) {
+                        setPickerState(() {
+                          tempColor = _converterHexParaColor(val);
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Paleta Rápida:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: coresRapidas.map((c) {
+                      return GestureDetector(
+                        onTap: () {
+                          setPickerState(() {
+                            tempColor = c;
+                            hexController.text = _converterColorParaHex(c);
+                          });
+                        },
+                        child: CircleAvatar(
+                          backgroundColor: c,
+                          radius: 18,
+                          child: tempColor.value == c.value
+                              ? const Icon(Icons.check, color: Colors.white, size: 18)
+                              : null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              ElevatedButton(
+                onPressed: () {
+                  onColorSelected(tempColor);
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Selecionar'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _criarNovaLista() {
     final titleController = TextEditingController();
-    String corSelecionada = 'azul';
+    Color corSelecionada = Colors.blue;
+    bool mostrarData = true;
+    String formatoData = 'dd/mm/aaaa';
+    bool mostrarHora = true;
+    String formatoHora = '24h';
 
     showDialog(
       context: context,
@@ -121,25 +224,53 @@ class _ListasPageState extends State<ListasPage> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text('Cor do Tema:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Cor da Grade / Tema'),
+                    trailing: CircleAvatar(
+                      backgroundColor: corSelecionada,
+                      radius: 16,
+                    ),
+                    onTap: () {
+                      _abrirSeletorCorHex(corSelecionada, (novaCor) {
+                        setDialogState(() => corSelecionada = novaCor);
+                      });
+                    },
                   ),
+                  const Divider(),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Mostrar Data'),
+                    value: mostrarData,
+                    onChanged: (v) => setDialogState(() => mostrarData = v),
+                  ),
+                  if (mostrarData)
+                    DropdownButtonFormField<String>(
+                      value: formatoData,
+                      decoration: const InputDecoration(labelText: 'Formato da Data'),
+                      items: const [
+                        DropdownMenuItem(value: 'dd/mm/aaaa', child: Text('dd/mm/aaaa')),
+                        DropdownMenuItem(value: 'mm/aaaa', child: Text('mm/aaaa')),
+                      ],
+                      onChanged: (v) => setDialogState(() => formatoData = v!),
+                    ),
                   const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    children: ['azul', 'verde', 'roxo', 'cinza', 'laranja', 'rosa'].map((cor) {
-                      final selected = corSelecionada == cor;
-                      return ChoiceChip(
-                        label: Text(cor),
-                        selected: selected,
-                        selectedColor: _obterCorTema(cor).withOpacity(0.3),
-                        onSelected: (val) {
-                          if (val) setDialogState(() => corSelecionada = cor);
-                        },
-                      );
-                    }).toList(),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Mostrar Hora'),
+                    value: mostrarHora,
+                    onChanged: (v) => setDialogState(() => mostrarHora = v),
                   ),
+                  if (mostrarHora)
+                    DropdownButtonFormField<String>(
+                      value: formatoHora,
+                      decoration: const InputDecoration(labelText: 'Formato da Hora'),
+                      items: const [
+                        DropdownMenuItem(value: '24h', child: Text('24 horas (14:30)')),
+                        DropdownMenuItem(value: '12h', child: Text('12 horas (02:30 PM)')),
+                      ],
+                      onChanged: (v) => setDialogState(() => formatoHora = v!),
+                    ),
                 ],
               ),
             ),
@@ -156,7 +287,11 @@ class _ListasPageState extends State<ListasPage> {
                   final novaLista = ListaEntidades(
                     id: _uuid.v4(),
                     titulo: titulo,
-                    corTema: corSelecionada,
+                    mostrarData: mostrarData,
+                    formatoData: formatoData,
+                    mostrarHora: mostrarHora,
+                    formatoHora: formatoHora,
+                    corTema: _converterColorParaHex(corSelecionada),
                     colunas: [
                       ColunaEspecificacao(id: _uuid.v4(), nome: 'Item', tipo: 'texto'),
                       ColunaEspecificacao(id: _uuid.v4(), nome: 'Valor', tipo: 'numero'),
@@ -178,37 +313,109 @@ class _ListasPageState extends State<ListasPage> {
     );
   }
 
+  Future<void> _importarListaJSON() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+      );
+
+      if (result != null && result.files.single.bytes != null) {
+        final jsonString = utf8.decode(result.files.single.bytes!);
+        final Map<String, dynamic> jsonData = jsonDecode(jsonString);
+
+        final listaImportada = ListaEntidades.fromJson(jsonData);
+
+        setState(() {
+          listaImportada.id = _uuid.v4();
+          _listas.add(listaImportada);
+        });
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lista importada com sucesso!')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao importar ficheiro: $e')),
+      );
+    }
+  }
+
   void _renomearEConfigurarLista(ListaEntidades lista) {
     final titleController = TextEditingController(text: lista.titulo);
-    String corSelecionada = lista.corTema;
+    Color corSelecionada = _converterHexParaColor(lista.corTema);
+    bool mostrarData = lista.mostrarData;
+    String formatoData = lista.formatoData;
+    bool mostrarHora = lista.mostrarHora;
+    String formatoHora = lista.formatoHora;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Editar Lista'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(labelText: 'Título'),
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  children: ['azul', 'verde', 'roxo', 'cinza', 'laranja', 'rosa'].map((cor) {
-                    return ChoiceChip(
-                      label: Text(cor),
-                      selected: corSelecionada == cor,
-                      onSelected: (val) {
-                        if (val) setDialogState(() => corSelecionada = cor);
-                      },
-                    );
-                  }).toList(),
-                ),
-              ],
+            title: const Text('Configurar Tabela'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: titleController,
+                    decoration: const InputDecoration(labelText: 'Título'),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Cor da Grade / Tema'),
+                    trailing: CircleAvatar(
+                      backgroundColor: corSelecionada,
+                      radius: 16,
+                    ),
+                    onTap: () {
+                      _abrirSeletorCorHex(corSelecionada, (novaCor) {
+                        setDialogState(() => corSelecionada = novaCor);
+                      });
+                    },
+                  ),
+                  const Divider(),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Mostrar Data'),
+                    value: mostrarData,
+                    onChanged: (v) => setDialogState(() => mostrarData = v),
+                  ),
+                  if (mostrarData)
+                    DropdownButtonFormField<String>(
+                      value: formatoData,
+                      decoration: const InputDecoration(labelText: 'Formato da Data'),
+                      items: const [
+                        DropdownMenuItem(value: 'dd/mm/aaaa', child: Text('dd/mm/aaaa')),
+                        DropdownMenuItem(value: 'mm/aaaa', child: Text('mm/aaaa')),
+                      ],
+                      onChanged: (v) => setDialogState(() => formatoData = v!),
+                    ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Mostrar Hora'),
+                    value: mostrarHora,
+                    onChanged: (v) => setDialogState(() => mostrarHora = v),
+                  ),
+                  if (mostrarHora)
+                    DropdownButtonFormField<String>(
+                      value: formatoHora,
+                      decoration: const InputDecoration(labelText: 'Formato da Hora'),
+                      items: const [
+                        DropdownMenuItem(value: '24h', child: Text('24 horas (14:30)')),
+                        DropdownMenuItem(value: '12h', child: Text('12 horas (02:30 PM)')),
+                      ],
+                      onChanged: (v) => setDialogState(() => formatoHora = v!),
+                    ),
+                ],
+              ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
@@ -216,7 +423,11 @@ class _ListasPageState extends State<ListasPage> {
                 onPressed: () {
                   setState(() {
                     lista.titulo = titleController.text.trim();
-                    lista.corTema = corSelecionada;
+                    lista.corTema = _converterColorParaHex(corSelecionada);
+                    lista.mostrarData = mostrarData;
+                    lista.formatoData = formatoData;
+                    lista.mostrarHora = mostrarHora;
+                    lista.formatoHora = formatoHora;
                   });
                   Navigator.pop(ctx);
                 },
@@ -236,7 +447,7 @@ class _ListasPageState extends State<ListasPage> {
         builder: (_) => DetalhesGrelhaPage(
           lista: lista,
           onSalvar: () => setState(() {}),
-          obterCor: _obterCorTema,
+          converterHex: _converterHexParaColor,
         ),
       ),
     );
@@ -252,6 +463,11 @@ class _ListasPageState extends State<ListasPage> {
         centerTitle: true,
         actions: [
           IconButton(
+            icon: const Icon(Icons.file_upload),
+            tooltip: 'Importar Lista (JSON)',
+            onPressed: _importarListaJSON,
+          ),
+          IconButton(
             icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
             tooltip: 'Alternar Modo Escuro',
             onPressed: widget.onToggleTheme,
@@ -261,7 +477,7 @@ class _ListasPageState extends State<ListasPage> {
       body: _listas.isEmpty
           ? const Center(
               child: Text(
-                'Nenhuma lista cadastrada.\nToque no botão + para criar sua primeira tabela.',
+                'Nenhuma lista cadastrada.\nToque no botão + ou importe um ficheiro JSON.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
@@ -270,7 +486,7 @@ class _ListasPageState extends State<ListasPage> {
               itemCount: _listas.length,
               itemBuilder: (context, index) {
                 final lista = _listas[index];
-                final cor = _obterCorTema(lista.corTema);
+                final cor = _converterHexParaColor(lista.corTema);
 
                 return Card(
                   margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -286,7 +502,7 @@ class _ListasPageState extends State<ListasPage> {
                       lista.titulo,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text('${lista.linhas.length} registros | ${lista.colunas.length} colunas'),
+                    subtitle: Text('${lista.linhas.length} registos | ${lista.colunas.length} colunas'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -309,7 +525,7 @@ class _ListasPageState extends State<ListasPage> {
                             }
                           },
                           itemBuilder: (ctx) => [
-                            const PopupMenuItem(value: 'editar', child: Text('Editar / Tema')),
+                            const PopupMenuItem(value: 'editar', child: Text('Editar / Configurações')),
                             const PopupMenuItem(value: 'excluir', child: Text('Excluir')),
                           ],
                         ),
@@ -331,13 +547,13 @@ class _ListasPageState extends State<ListasPage> {
 class DetalhesGrelhaPage extends StatefulWidget {
   final ListaEntidades lista;
   final VoidCallback onSalvar;
-  final Color Function(String) obterCor;
+  final Color Function(String) converterHex;
 
   const DetalhesGrelhaPage({
     super.key,
     required this.lista,
     required this.onSalvar,
-    required this.obterCor,
+    required this.converterHex,
   });
 
   @override
@@ -346,6 +562,33 @@ class DetalhesGrelhaPage extends StatefulWidget {
 
 class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
   final Uuid _uuid = const Uuid();
+
+  String _formatarDataHoraAtual() {
+    final agora = DateTime.now();
+    String dataStr = '';
+    String horaStr = '';
+
+    if (widget.lista.mostrarData) {
+      if (widget.lista.formatoData == 'mm/aaaa') {
+        dataStr = DateFormat('MM/yyyy').format(agora);
+      } else {
+        dataStr = DateFormat('dd/MM/yyyy').format(agora);
+      }
+    }
+
+    if (widget.lista.mostrarHora) {
+      if (widget.lista.formatoHora == '12h') {
+        horaStr = DateFormat('hh:mm a').format(agora);
+      } else {
+        horaStr = DateFormat('HH:mm').format(agora);
+      }
+    }
+
+    if (dataStr.isNotEmpty && horaStr.isNotEmpty) {
+      return '$dataStr $horaStr';
+    }
+    return dataStr.isNotEmpty ? dataStr : horaStr;
+  }
 
   void _adicionarColuna() {
     if (widget.lista.isLocked) return;
@@ -468,6 +711,10 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
       novosValores[col.id] = col.tipo == 'checkbox' ? 'false' : '';
     }
 
+    if (widget.lista.mostrarData || widget.lista.mostrarHora) {
+      novosValores['_dataHora'] = _formatarDataHoraAtual();
+    }
+
     setState(() {
       widget.lista.linhas.add(
         Entidade(id: _uuid.v4(), valores: novosValores),
@@ -478,6 +725,12 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
 
   Future<void> _exportarEImprimirPDF() async {
     final pdf = pw.Document();
+
+    final headers = <String>[];
+    if (widget.lista.mostrarData || widget.lista.mostrarHora) {
+      headers.add('Data/Hora');
+    }
+    headers.addAll(widget.lista.colunas.map((c) => c.nome));
 
     pdf.addPage(
       pw.MultiPage(
@@ -490,11 +743,16 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
             ),
             pw.SizedBox(height: 10),
             pw.Table.fromTextArray(
-              headers: widget.lista.colunas.map((c) => c.nome).toList(),
+              headers: headers,
               data: widget.lista.linhas.map((linha) {
-                return widget.lista.colunas.map((col) {
+                final rowData = <String>[];
+                if (widget.lista.mostrarData || widget.lista.mostrarHora) {
+                  rowData.add(linha.valores['_dataHora'] ?? '');
+                }
+                rowData.addAll(widget.lista.colunas.map((col) {
                   return linha.valores[col.id] ?? '';
-                }).toList();
+                }));
+                return rowData;
               }).toList(),
             ),
           ];
@@ -528,7 +786,8 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
 
   @override
   Widget build(BuildContext context) {
-    final corTema = widget.obterCor(widget.lista.corTema);
+    final corTema = widget.converterHex(widget.lista.corTema);
+    final incluirDataHora = widget.lista.mostrarData || widget.lista.mostrarHora;
 
     return Scaffold(
       appBar: AppBar(
@@ -560,83 +819,107 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
-                  columns: widget.lista.colunas.map((col) {
-                    return DataColumn(
-                      label: InkWell(
-                        onTap: () => _opcoesColuna(col),
-                        child: Row(
-                          children: [
-                            Text(
-                              col.nome,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 4),
-                            const Icon(Icons.edit, size: 14, color: Colors.grey),
-                          ],
+                  headingRowColor: MaterialStateProperty.all(corTema.withOpacity(0.15)),
+                  border: TableBorder.all(
+                    color: corTema.withOpacity(0.4),
+                    width: 1,
+                  ),
+                  columns: [
+                    if (incluirDataHora)
+                      const DataColumn(
+                        label: Text(
+                          'Data/Hora',
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ...widget.lista.colunas.map((col) {
+                      return DataColumn(
+                        label: InkWell(
+                          onTap: () => _opcoesColuna(col),
+                          child: Row(
+                            children: [
+                              Text(
+                                col.nome,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.edit, size: 14, color: Colors.grey),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
                   rows: widget.lista.linhas.map((linha) {
                     return DataRow(
-                      cells: widget.lista.colunas.map((col) {
-                        final val = linha.valores[col.id] ?? '';
-
-                        if (col.tipo == 'checkbox') {
-                          final isChecked = val.toLowerCase() == 'true';
-                          return DataCell(
-                            Checkbox(
-                              value: isChecked,
-                              onChanged: widget.lista.isLocked
-                                  ? null
-                                  : (bool? nv) {
-                                      setState(() {
-                                        linha.valores[col.id] = (nv ?? false).toString();
-                                      });
-                                      widget.onSalvar();
-                                    },
+                      cells: [
+                        if (incluirDataHora)
+                          DataCell(
+                            Text(
+                              linha.valores['_dataHora'] ?? '',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
                             ),
-                          );
-                        }
+                          ),
+                        ...widget.lista.colunas.map((col) {
+                          final val = linha.valores[col.id] ?? '';
 
-                        return DataCell(
-                          Text(val.isEmpty ? '-' : val),
-                          showEditIcon: !widget.lista.isLocked,
-                          onTap: widget.lista.isLocked
-                              ? null
-                              : () {
-                                  final controller = TextEditingController(text: val);
-                                  showDialog(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: Text('Editar ${col.nome}'),
-                                      content: TextField(
-                                        controller: controller,
-                                        keyboardType: col.tipo == 'numero'
-                                            ? TextInputType.number
-                                            : TextInputType.text,
+                          if (col.tipo == 'checkbox') {
+                            final isChecked = val.toLowerCase() == 'true';
+                            return DataCell(
+                              Checkbox(
+                                value: isChecked,
+                                activeColor: corTema,
+                                onChanged: widget.lista.isLocked
+                                    ? null
+                                    : (bool? nv) {
+                                        setState(() {
+                                          linha.valores[col.id] = (nv ?? false).toString();
+                                        });
+                                        widget.onSalvar();
+                                      },
+                              ),
+                            );
+                          }
+
+                          return DataCell(
+                            Text(val.isEmpty ? '-' : val),
+                            showEditIcon: !widget.lista.isLocked,
+                            onTap: widget.lista.isLocked
+                                ? null
+                                : () {
+                                    final controller = TextEditingController(text: val);
+                                    showDialog(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: Text('Editar ${col.nome}'),
+                                        content: TextField(
+                                          controller: controller,
+                                          keyboardType: col.tipo == 'numero'
+                                              ? TextInputType.number
+                                              : TextInputType.text,
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(ctx),
+                                            child: const Text('Cancelar'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                linha.valores[col.id] = controller.text;
+                                              });
+                                              widget.onSalvar();
+                                              Navigator.pop(ctx);
+                                            },
+                                            child: const Text('Salvar'),
+                                          ),
+                                        ],
                                       ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx),
-                                          child: const Text('Cancelar'),
-                                        ),
-                                        ElevatedButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              linha.valores[col.id] = controller.text;
-                                            });
-                                            widget.onSalvar();
-                                            Navigator.pop(ctx);
-                                          },
-                                          child: const Text('Salvar'),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                        );
-                      }).toList(),
+                                    );
+                                  },
+                          );
+                        }),
+                      ],
                     );
                   }).toList(),
                 ),

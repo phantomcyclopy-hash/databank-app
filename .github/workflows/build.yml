@@ -15,14 +15,15 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      # Cria a estrutura android temporariamente noutra pasta e copia APENAS o android/ para o projeto, protegendo o teu lib/main.dart
+      # Cria o scaffolding do Android de forma completamente isolada numa pasta temporária 
+      # e copia apenas a pasta android para o projeto, mantendo o teu diretório lib/ 100% intocado.
       - name: Generate Android scaffolding safely
         run: |
           flutter create temp_project --platforms=android --project-name=banco_dinamico --org com.banco.dinamico --suppress-analytics
           cp -r temp_project/android ./android
           rm -rf temp_project
 
-      # Insere a resolução global de dependências para o Kotlin 1.8.22 no android/build.gradle
+      # Aplica a correção de compatibilidade do Kotlin para evitar conflitos de versão
       - name: Fix Kotlin stdlib conflict safely in android/build.gradle
         run: |
           python3 -c '
@@ -47,7 +48,7 @@ jobs:
               f.write(content)
           '
 
-      # Compila o APK de Release mantendo o teu main.dart totalmente seguro
+      # Instala as dependências e compila o APK de Release
       - run: flutter pub get
       - run: flutter build apk --release
 

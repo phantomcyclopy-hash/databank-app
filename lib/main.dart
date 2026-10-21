@@ -1,144 +1,91 @@
-enum TipoAtributo { texto, numero, checkbox }
+import 'package:flutter/material.dart';
+import 'models.dart';
 
-class ColunaEspecificacao {
-  String id;
-  String nome;
-  TipoAtributo tipo;
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const BancoDinamicoApp());
+}
 
-  ColunaEspecificacao({
-    required this.id,
-    required this.nome,
-    this.tipo = TipoAtributo.texto,
-  });
+class BancoDinamicoApp extends StatelessWidget {
+  const BancoDinamicoApp({super.key});
 
-  Map<String, dynamic> toMap() => toJson();
-
-  factory ColunaEspecificacao.fromMap(Map<String, dynamic> json) =>
-      ColunaEspecificacao.fromJson(json);
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'nome': nome,
-        'tipo': tipo.name,
-      };
-
-  factory ColunaEspecificacao.fromJson(Map<String, dynamic> json) {
-    return ColunaEspecificacao(
-      id: json['id'] ?? '',
-      nome: json['nome'] ?? '',
-      tipo: TipoAtributo.values.firstWhere(
-        (e) => e.name == json['tipo'],
-        orElse: () => TipoAtributo.texto,
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Banco Dinâmico',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
+      home: const ListasPage(),
     );
   }
 }
 
-class Entidade {
-  String id;
-  String nome;
-  Map<String, String> valoresAtributos;
+class ListasPage extends StatefulWidget {
+  const ListasPage({super.key});
 
-  Entidade({
-    required this.id,
-    required this.nome,
-    required this.valoresAtributos,
-  });
+  @override
+  State<ListasPage> createState() => _ListasPageState();
+}
 
-  Entidade copiar() {
-    return Entidade(
-      id: id,
-      nome: nome,
-      valoresAtributos: Map<String, String>.from(valoresAtributos),
-    );
-  }
+class _ListasPageState extends State<ListasPage> {
+  // Lista inicial de exemplo ou carregada do banco
+  List<ListaEntidades> listas = [];
 
-  Map<String, dynamic> toMap() => toJson();
-
-  factory Entidade.fromMap(Map<String, dynamic> json) =>
-      Entidade.fromJson(json);
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'nome': nome,
-        'valoresAtributos': valoresAtributos,
-      };
-
-  factory Entidade.fromJson(Map<String, dynamic> json) {
-    return Entidade(
-      id: json['id'] ?? '',
-      nome: json['nome'] ?? '',
-      valoresAtributos: Map<String, String>.from(
-        json['valoresAtributos'] ?? json['valores'] ?? {},
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Banco Dinâmico'),
+        centerTitle: true,
+      ),
+      body: listas.isEmpty
+          ? const Center(
+              child: Text(
+                'Nenhuma lista encontrada.\nToque no botão + para criar a tua primeira tabela.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey),
+              ),
+            )
+          : ListView.builder(
+              itemCount: listas.length,
+              itemBuilder: (context, index) {
+                final lista = listas[index];
+                return ListTile(
+                  leading: Icon(
+                    lista.isLocked ? Icons.lock : Icons.table_chart,
+                    color: _obterCorTema(lista.corTema),
+                  ),
+                  title: Text(lista.titulo),
+                  subtitle: Text('${lista.linhas.length} registos'),
+                  onTap: () {
+                    // Navegar para a grelha de detalhes da lista
+                  },
+                );
+              },
+            ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Ação para criar nova lista
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
-}
 
-class ListaEntidades {
-  String id;
-  String titulo;
-  String descricao;
-  bool mostrarData;
-  String formatoData; // 'dd/mm/aaaa' ou 'mm/aaaa'
-  bool mostrarHora;
-  String formatoHora; // '12h' ou '24h'
-  String corTema; // 'azul', 'verde', 'roxo', 'cinza'
-  bool isLocked;
-  List<ColunaEspecificacao> colunas;
-  List<Entidade> linhas;
-
-  ListaEntidades({
-    required this.id,
-    required this.titulo,
-    this.descricao = '',
-    this.mostrarData = true,
-    this.formatoData = 'dd/mm/aaaa',
-    this.mostrarHora = true,
-    this.formatoHora = '24h',
-    this.corTema = 'azul',
-    this.isLocked = false,
-    required this.colunas,
-    required this.linhas,
-  });
-
-  // Apelidos (aliases) para compatibilidade direta com o import_export_helper.dart
-  Map<String, dynamic> toMap() => toJson();
-
-  factory ListaEntidades.fromMap(Map<String, dynamic> json) =>
-      ListaEntidades.fromJson(json);
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'titulo': titulo,
-        'descricao': descricao,
-        'mostrarData': mostrarData,
-        'formatoData': formatoData,
-        'mostrarHora': mostrarHora,
-        'formatoHora': formatoHora,
-        'corTema': corTema,
-        'isLocked': isLocked,
-        'colunas': colunas.map((c) => c.toJson()).toList(),
-        'linhas': linhas.map((l) => l.toJson()).toList(),
-      };
-
-  factory ListaEntidades.fromJson(Map<String, dynamic> json) {
-    return ListaEntidades(
-      id: json['id'] ?? '',
-      titulo: json['titulo'] ?? '',
-      descricao: json['descricao'] ?? '',
-      mostrarData: json['mostrarData'] ?? true,
-      formatoData: json['formatoData'] ?? 'dd/mm/aaaa',
-      mostrarHora: json['mostrarHora'] ?? true,
-      formatoHora: json['formatoHora'] ?? '24h',
-      corTema: json['corTema'] ?? 'azul',
-      isLocked: json['isLocked'] ?? false,
-      colunas: (json['colunas'] as List? ?? [])
-          .map((c) => ColunaEspecificacao.fromJson(c))
-          .toList(),
-      linhas: (json['linhas'] as List? ?? [])
-          .map((l) => Entidade.fromJson(l))
-          .toList(),
-    );
+  Color _obterCorTema(String tema) {
+    switch (tema) {
+      case 'verde':
+        return Colors.green;
+      case 'roxo':
+        return Colors.purple;
+      case 'cinza':
+        return Colors.grey;
+      case 'azul':
+      default:
+        return Colors.blue;
+    }
   }
 }

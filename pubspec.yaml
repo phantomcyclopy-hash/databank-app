@@ -1,5 +1,5 @@
-name: banco_dinamico
-description: Banco de dados dinâmico e modular (Android, iOS, Windows, macOS, Linux).
+name: databank
+description: Banco de dados dinâmico e modular para cadastro de membros e gestão de listas (Android, iOS, Windows, macOS, Linux).
 publish_to: none
 version: 0.1.0
 
@@ -17,6 +17,7 @@ dependencies:
   pdf: ^3.10.4
   printing: ^5.11.1
   file_picker: ^8.0.0
+  image_picker: ^1.0.7
   share_plus: ^9.0.0
 
 dev_dependencies:

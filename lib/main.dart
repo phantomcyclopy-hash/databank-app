@@ -1,31 +1,77 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'models.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BancoDinamicoApp());
+  runApp(const DatabankApp());
 }
 
-class BancoDinamicoApp extends StatelessWidget {
-  const BancoDinamicoApp({super.key});
+class DatabankApp extends StatefulWidget {
+  const DatabankApp({super.key});
+
+  @override
+  State<DatabankApp> createState() => _DatabankAppState();
+}
+
+class _DatabankAppState extends State<DatabankApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  void _toggleTheme() {
+    setState(() {
+      if (_themeMode == ThemeMode.light) {
+        _themeMode = ThemeMode.dark;
+      } else if (_themeMode == ThemeMode.dark) {
+        _themeMode = ThemeMode.light;
+      } else {
+        _themeMode = ThemeMode.dark;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Banco Dinâmico',
+      title: 'Databank',
       debugShowCheckedModeBanner: false,
+      themeMode: _themeMode,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
+        ),
         useMaterial3: true,
       ),
-      home: const ListasPage(),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      home: ListasPage(
+        onToggleTheme: _toggleTheme,
+        currentThemeMode: _themeMode,
+      ),
     );
   }
 }
 
 class ListasPage extends StatefulWidget {
-  const ListasPage({super.key});
+  final VoidCallback onToggleTheme;
+  final ThemeMode currentThemeMode;
+
+  const ListasPage({
+    super.key,
+    required this.onToggleTheme,
+    required this.currentThemeMode,
+  });
 
   @override
   State<ListasPage> createState() => _ListasPageState();
@@ -198,10 +244,19 @@ class _ListasPageState extends State<ListasPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Banco Dinâmico'),
+        title: const Text('Databank'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+            tooltip: 'Alternar Modo Escuro',
+            onPressed: widget.onToggleTheme,
+          ),
+        ],
       ),
       body: _listas.isEmpty
           ? const Center(
@@ -350,6 +405,61 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
     );
   }
 
+  void _opcoesColuna(ColunaEspecificacao col) {
+    if (widget.lista.isLocked) return;
+
+    final controller = TextEditingController(text: col.nome);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Gerenciar Coluna "${col.nome}"'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: const InputDecoration(labelText: 'Novo Nome da Coluna'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                widget.lista.colunas.removeWhere((c) => c.id == col.id);
+                for (var linha in widget.lista.linhas) {
+                  linha.valores.remove(col.id);
+                }
+              });
+              widget.onSalvar();
+              Navigator.pop(ctx);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Excluir Coluna'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final novoNome = controller.text.trim();
+              if (novoNome.isNotEmpty) {
+                setState(() {
+                  col.nome = novoNome;
+                });
+                widget.onSalvar();
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _adicionarLinha() {
     if (widget.lista.isLocked) return;
 
@@ -366,6 +476,56 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
     widget.onSalvar();
   }
 
+  Future<void> _exportarEImprimirPDF() async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return [
+            pw.Header(
+              level: 0,
+              child: pw.Text(widget.lista.titulo, style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+            ),
+            pw.SizedBox(height: 10),
+            pw.Table.fromTextArray(
+              headers: widget.lista.colunas.map((c) => c.nome).toList(),
+              data: widget.lista.linhas.map((linha) {
+                return widget.lista.colunas.map((col) {
+                  return linha.valores[col.id] ?? '';
+                }).toList();
+              }).toList(),
+            ),
+          ];
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(),
+    );
+  }
+
+  void _exportarJSON() {
+    final jsonStr = jsonEncode(widget.lista.toJson());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Exportar Dados (JSON)'),
+        content: SingleChildScrollView(
+          child: SelectableText(jsonStr),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final corTema = widget.obterCor(widget.lista.corTema);
@@ -376,6 +536,16 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
         backgroundColor: corTema,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.print),
+            tooltip: 'Imprimir / Salvar PDF',
+            onPressed: _exportarEImprimirPDF,
+          ),
+          IconButton(
+            icon: const Icon(Icons.code),
+            tooltip: 'Exportar JSON',
+            onPressed: _exportarJSON,
+          ),
           IconButton(
             icon: const Icon(Icons.view_column),
             tooltip: 'Adicionar Coluna',
@@ -392,9 +562,18 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
                 child: DataTable(
                   columns: widget.lista.colunas.map((col) {
                     return DataColumn(
-                      label: Text(
-                        col.nome,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      label: InkWell(
+                        onTap: () => _opcoesColuna(col),
+                        child: Row(
+                          children: [
+                            Text(
+                              col.nome,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.edit, size: 14, color: Colors.grey),
+                          ],
+                        ),
                       ),
                     );
                   }).toList(),

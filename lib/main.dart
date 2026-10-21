@@ -12,17 +12,17 @@ import 'models.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const DatabankApp());
+  runApp(const IBMMKARApp());
 }
 
-class DatabankApp extends StatefulWidget {
-  const DatabankApp({super.key});
+class IBMMKARApp extends StatefulWidget {
+  const IBMMKARApp({super.key});
 
   @override
-  State<DatabankApp> createState() => _DatabankAppState();
+  State<IBMMKARApp> createState() => _IBMMKARAppState();
 }
 
-class _DatabankAppState extends State<DatabankApp> {
+class _IBMMKARAppState extends State<IBMMKARApp> {
   ThemeMode _themeMode = ThemeMode.system;
 
   void _toggleTheme() {
@@ -40,13 +40,13 @@ class _DatabankAppState extends State<DatabankApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Databank - Membros',
+      title: 'IBMMKAR - Membros',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeData(
         brightness: Brightness.light,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: const Color(0xFF1B2A4A),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -54,7 +54,7 @@ class _DatabankAppState extends State<DatabankApp> {
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blue,
+          seedColor: const Color(0xFF1B2A4A),
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
@@ -93,7 +93,7 @@ class _ListasPageState extends State<ListasPage> {
       }
       return Color(int.parse('0x$cleanHex'));
     } catch (_) {
-      return Colors.blue;
+      return const Color(0xFF1B2A4A);
     }
   }
 
@@ -106,7 +106,7 @@ class _ListasPageState extends State<ListasPage> {
     final hexController = TextEditingController(text: _converterColorParaHex(corAtual));
 
     final List<Color> coresRapidas = [
-      Colors.blue,
+      const Color(0xFF1B2A4A),
       Colors.indigo,
       Colors.teal,
       Colors.green,
@@ -201,7 +201,7 @@ class _ListasPageState extends State<ListasPage> {
 
   void _criarNovaLista() {
     final titleController = TextEditingController();
-    Color corSelecionada = Colors.blue;
+    Color corSelecionada = const Color(0xFF1B2A4A);
     bool mostrarData = true;
     String formatoData = 'dd/mm/aaaa';
     bool mostrarHora = true;
@@ -212,7 +212,7 @@ class _ListasPageState extends State<ListasPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Nova Lista de Membros'),
+            title: const Text('Nova Lista de Membros - IBMMKAR'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -221,7 +221,7 @@ class _ListasPageState extends State<ListasPage> {
                     controller: titleController,
                     decoration: const InputDecoration(
                       labelText: 'Título da Tabela',
-                      hintText: 'Ex: Cadastro Geral, Membros Ativos, Evento',
+                      hintText: 'Ex: Rol de Membros, EBD, Batismo',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -460,7 +460,7 @@ class _ListasPageState extends State<ListasPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Databank - Membros'),
+        title: const Text('IBMMKAR - Membros'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -494,8 +494,8 @@ class _ListasPageState extends State<ListasPage> {
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: cor,
-                      child: Icon(
-                        lista.isLocked ? Icons.lock : Icons.people_alt,
+                      child: const Icon(
+                        Icons.church,
                         color: Colors.white,
                       ),
                     ),
@@ -880,8 +880,8 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('FICHA CADASTRAL DO MEMBRO', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('Databank', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+                    pw.Text('IBMMKAR - FICHA CADASTRAL DO MEMBRO', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Sistema IBMMKAR', style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
                   ],
                 ),
               ),
@@ -900,7 +900,7 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('Nome: ${membro.nome}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                        pw.Text('Nome: ${membro.nome}', style: pw.TextStyle(fontSize: 15, fontWeight: pw.FontWeight.bold)),
                         pw.SizedBox(height: 4),
                         pw.Text('CPF: ${membro.cpf} | RG: ${membro.rg}'),
                         pw.Text('Idade: ${membro.idade} | Sexo: ${membro.sexo}'),
@@ -913,7 +913,7 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
               ),
               pw.SizedBox(height: 20),
               pw.Divider(),
-              pw.Text('Especificações & Atributos Adicionais:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.Text('Especificações & Atributos Adicionais:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
               pw.SizedBox(height: 8),
               ...widget.lista.colunas.map((col) {
                 final val = membro.valoresAtributosDinamicos[col.id] ?? '';
@@ -945,9 +945,9 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('LISTA DE PRESENÇA - ${widget.lista.titulo}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  pw.Text('IBMMKAR - LISTA DE PRESENÇA: ${widget.lista.titulo}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
                   if (dataHoraSubtit.isNotEmpty)
-                    pw.Text(dataHoraSubtit, style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
+                    pw.Text(dataHoraSubtit, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                 ],
               ),
             ),

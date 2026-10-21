@@ -15,7 +15,7 @@ jobs:
           channel: 'stable'
       - run: flutter pub get
       - name: Regenerate Android platform files
-        run: flutter create --platforms=android .
+        run: flutter create --platforms=android --project-name=databank_app .
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
@@ -32,7 +32,7 @@ jobs:
           channel: 'stable'
       - run: flutter pub get
       - name: Regenerate Windows platform files
-        run: flutter create --platforms=windows .
+        run: flutter create --platforms=windows --project-name=databank_app .
       - run: flutter build windows --release
       - uses: actions/upload-artifact@v4
         with:

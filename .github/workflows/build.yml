@@ -15,8 +15,12 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      # Cria a estrutura nativa completa do Android V2 sem tocar ou apagar a pasta lib/ existente
-      - run: flutter create . --platforms=android --project-name=banco_dinamico --org com.banco.dinamico --suppress-analytics
+      # Cria a estrutura android temporariamente noutra pasta e copia APENAS o android/ para o projeto, protegendo o teu lib/main.dart
+      - name: Generate Android scaffolding safely
+        run: |
+          flutter create temp_project --platforms=android --project-name=banco_dinamico --org com.banco.dinamico --suppress-analytics
+          cp -r temp_project/android ./android
+          rm -rf temp_project
 
       # Insere a resolução global de dependências para o Kotlin 1.8.22 no android/build.gradle
       - name: Fix Kotlin stdlib conflict safely in android/build.gradle
@@ -43,7 +47,7 @@ jobs:
               f.write(content)
           '
 
-      # Compila o APK de Release com sucesso
+      # Compila o APK de Release mantendo o teu main.dart totalmente seguro
       - run: flutter pub get
       - run: flutter build apk --release
 

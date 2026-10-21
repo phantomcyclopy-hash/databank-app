@@ -31,17 +31,47 @@ class ColunaEspecificacao {
 
 class Entidade {
   String id;
-  Map<String, String> valores;
+  String nome;
+  String? fotoBase64;
+  String cpf;
+  String rg;
+  String idade;
+  String sexo;
+  String tipoSanguineo;
+  String telefone;
+  String celular;
+  String email;
+  Map<String, String> valoresAtributosDinamicos;
 
   Entidade({
     required this.id,
-    required this.valores,
+    required this.nome,
+    this.fotoBase64,
+    this.cpf = '',
+    this.rg = '',
+    this.idade = '',
+    this.sexo = 'N/A',
+    this.tipoSanguineo = 'N/A',
+    this.telefone = '',
+    this.celular = '',
+    this.email = '',
+    required this.valoresAtributosDinamicos,
   });
 
   Entidade copiar() {
     return Entidade(
       id: id,
-      valores: Map<String, String>.from(valores),
+      nome: nome,
+      fotoBase64: fotoBase64,
+      cpf: cpf,
+      rg: rg,
+      idade: idade,
+      sexo: sexo,
+      tipoSanguineo: tipoSanguineo,
+      telefone: telefone,
+      celular: celular,
+      email: email,
+      valoresAtributosDinamicos: Map<String, String>.from(valoresAtributosDinamicos),
     );
   }
 
@@ -52,13 +82,35 @@ class Entidade {
 
   Map<String, dynamic> toJson() => {
         'id': id,
-        'valores': valores,
+        'nome': nome,
+        'fotoBase64': fotoBase64,
+        'cpf': cpf,
+        'rg': rg,
+        'idade': idade,
+        'sexo': sexo,
+        'tipoSanguineo': tipoSanguineo,
+        'telefone': telefone,
+        'celular': celular,
+        'email': email,
+        'valoresAtributosDinamicos': valoresAtributosDinamicos,
       };
 
   factory Entidade.fromJson(Map<String, dynamic> json) {
     return Entidade(
       id: json['id'] ?? '',
-      valores: Map<String, String>.from(json['valores'] ?? {}),
+      nome: json['nome'] ?? '',
+      fotoBase64: json['fotoBase64'],
+      cpf: json['cpf'] ?? '',
+      rg: json['rg'] ?? '',
+      idade: json['idade'] ?? '',
+      sexo: json['sexo'] ?? 'N/A',
+      tipoSanguineo: json['tipoSanguineo'] ?? 'N/A',
+      telefone: json['telefone'] ?? '',
+      celular: json['celular'] ?? '',
+      email: json['email'] ?? '',
+      valoresAtributosDinamicos: Map<String, String>.from(
+        json['valoresAtributosDinamicos'] ?? json['valores'] ?? {},
+      ),
     );
   }
 }
@@ -70,7 +122,7 @@ class ListaEntidades {
   String formatoData; // 'dd/mm/aaaa' ou 'mm/aaaa'
   bool mostrarHora;
   String formatoHora; // '12h' ou '24h'
-  String corTema; // 'azul', 'verde', 'roxo', 'cinza', 'laranja', 'rosa'
+  String corTema; // Código Hex
   bool isLocked;
   List<ColunaEspecificacao> colunas;
   List<Entidade> linhas;
@@ -82,7 +134,7 @@ class ListaEntidades {
     this.formatoData = 'dd/mm/aaaa',
     this.mostrarHora = true,
     this.formatoHora = '24h',
-    this.corTema = 'azul',
+    this.corTema = '#2196F3',
     this.isLocked = false,
     required this.colunas,
     required this.linhas,
@@ -114,7 +166,7 @@ class ListaEntidades {
       formatoData: json['formatoData'] ?? 'dd/mm/aaaa',
       mostrarHora: json['mostrarHora'] ?? true,
       formatoHora: json['formatoHora'] ?? '24h',
-      corTema: json['corTema'] ?? 'azul',
+      corTema: json['corTema'] ?? '#2196F3',
       isLocked: json['isLocked'] ?? false,
       colunas: (json['colunas'] as List? ?? [])
           .map((c) => ColunaEspecificacao.fromJson(c))

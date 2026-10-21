@@ -1,58 +1,38 @@
-name: Build Flutter APK
+name: Build IBMMKAR App
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
-  build:
+  build-android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.x'
+          flutter-version: '3.19.6'
           channel: 'stable'
-
-      # Cria o scaffolding do Android de forma completamente isolada numa pasta temporária 
-      # e copia apenas a pasta android para o projeto, mantendo o teu diretório lib/ 100% intocado.
-      - name: Generate Android scaffolding safely
-        run: |
-          flutter create temp_project --platforms=android --project-name=banco_dinamico --org com.banco.dinamico --suppress-analytics
-          cp -r temp_project/android ./android
-          rm -rf temp_project
-
-      # Aplica a correção de compatibilidade do Kotlin para evitar conflitos de versão
-      - name: Fix Kotlin stdlib conflict safely in android/build.gradle
-        run: |
-          python3 -c '
-          path = "android/build.gradle"
-          with open(path, "r") as f:
-              content = f.read()
-          
-          resolution_rule = """
-          allprojects {
-              configurations.all {
-                  resolutionStrategy {
-                      force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
-                      force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
-                      force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
-                  }
-              }
-          }
-          """
-          
-          content = content + "\n" + resolution_rule
-          with open(path, "w") as f:
-              f.write(content)
-          '
-
-      # Instala as dependências e compila o APK de Release
       - run: flutter pub get
+      - run: flutter pub run flutter_launcher_icons
       - run: flutter build apk --release
-
       - uses: actions/upload-artifact@v4
         with:
-          name: app-release
+          name: IBMMKAR-Android-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.6'
+          channel: 'stable'
+      - run: flutter pub get
+      - run: flutter pub run flutter_launcher_icons
+      - run: flutter build windows --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: IBMMKAR-Windows-EXE
+          path: build/windows/x64/runner/Release/

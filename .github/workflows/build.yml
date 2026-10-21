@@ -1,4 +1,3 @@
-
 name: Build Flutter APK
 
 on:
@@ -16,16 +15,8 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      # Cria apenas a estrutura mínima do Android via script sem tocar no teu lib/main.dart
-      - name: Setup Android Directory Structure
-        run: |
-          mkdir -p android/app
-          flutter pub get
-
-      # Força a criação do projeto Android sem sobrescrever o diretório lib/
-      - name: Generate Android Local Files
-        run: |
-          flutter create . --platforms=android --project-name=banco_dinamico --org com.banco.dinamico --overwrite
+      # Cria a estrutura nativa completa do Android V2 sem tocar ou apagar a pasta lib/ existente
+      - run: flutter create . --platforms=android --project-name=banco_dinamico --org com.banco.dinamico --suppress-analytics
 
       # Insere a resolução global de dependências para o Kotlin 1.8.22 no android/build.gradle
       - name: Fix Kotlin stdlib conflict safely in android/build.gradle
@@ -52,7 +43,8 @@ jobs:
               f.write(content)
           '
 
-      # Compila o APK de Release preservando o teu main.dart
+      # Compila o APK de Release com sucesso
+      - run: flutter pub get
       - run: flutter build apk --release
 
       - uses: actions/upload-artifact@v4

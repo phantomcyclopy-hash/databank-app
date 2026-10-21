@@ -466,7 +466,7 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
       floatingActionButton: FloatingActionButton(
         onPressed: widget.lista.isLocked ? null : _adicionarLinha,
         backgroundColor: widget.lista.isLocked ? Colors.grey : corTema,
-        child: const Icon(Icons.add_row_below, color: Colors.white),
+        child: const Icon(Icons.playlist_add, color: Colors.white),
       ),
     );
   }

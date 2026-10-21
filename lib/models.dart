@@ -9,6 +9,11 @@ class ColunaEspecificacao {
     this.tipo = 'texto',
   });
 
+  Map<String, dynamic> toMap() => toJson();
+
+  factory ColunaEspecificacao.fromMap(Map<String, dynamic> json) =>
+      ColunaEspecificacao.fromJson(json);
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'nome': nome,
@@ -39,6 +44,11 @@ class Entidade {
       valores: Map<String, String>.from(valores),
     );
   }
+
+  Map<String, dynamic> toMap() => toJson();
+
+  factory Entidade.fromMap(Map<String, dynamic> json) =>
+      Entidade.fromJson(json);
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -77,6 +87,11 @@ class ListaEntidades {
     required this.colunas,
     required this.linhas,
   });
+
+  Map<String, dynamic> toMap() => toJson();
+
+  factory ListaEntidades.fromMap(Map<String, dynamic> json) =>
+      ListaEntidades.fromJson(json);
 
   Map<String, dynamic> toJson() => {
         'id': id,

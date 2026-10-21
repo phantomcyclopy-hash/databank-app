@@ -40,7 +40,7 @@ class _DatabankAppState extends State<DatabankApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Databank - Gestão de Membros',
+      title: 'Databank - Membros',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeData(
@@ -873,7 +873,7 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
         pageFormat: PdfPageFormat.a4,
         build: (pw.Context context) {
           return pw.Column(
-            cross: pw.CrossAxisAlignment.start,
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Header(
                 level: 0,
@@ -887,7 +887,7 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
               ),
               pw.SizedBox(height: 16),
               pw.Row(
-                cross: pw.CrossAxisAlignment.start,
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   if (imageBytes != null)
                     pw.Container(
@@ -898,7 +898,7 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
                     ),
                   pw.Expanded(
                     child: pw.Column(
-                      cross: pw.CrossAxisAlignment.start,
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('Nome: ${membro.nome}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
                         pw.SizedBox(height: 4),

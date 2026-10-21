@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'models.dart';
 
@@ -38,7 +40,7 @@ class _DatabankAppState extends State<DatabankApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Databank',
+      title: 'Databank - Gestão de Membros',
       debugShowCheckedModeBanner: false,
       themeMode: _themeMode,
       theme: ThemeData(
@@ -210,7 +212,7 @@ class _ListasPageState extends State<ListasPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Nova Lista / Tabela'),
+            title: const Text('Nova Lista de Membros'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -219,7 +221,7 @@ class _ListasPageState extends State<ListasPage> {
                     controller: titleController,
                     decoration: const InputDecoration(
                       labelText: 'Título da Tabela',
-                      hintText: 'Ex: Finanças, Tarefas, Inventário',
+                      hintText: 'Ex: Cadastro Geral, Membros Ativos, Evento',
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -292,8 +294,8 @@ class _ListasPageState extends State<ListasPage> {
                     formatoHora: formatoHora,
                     corTema: _converterColorParaHex(corSelecionada),
                     colunas: [
-                      ColunaEspecificacao(id: _uuid.v4(), nome: 'Item', tipo: 'texto'),
-                      ColunaEspecificacao(id: _uuid.v4(), nome: 'Valor', tipo: 'numero'),
+                      ColunaEspecificacao(id: _uuid.v4(), nome: 'Cargo / Função', tipo: 'texto'),
+                      ColunaEspecificacao(id: _uuid.v4(), nome: 'Observação', tipo: 'texto'),
                     ],
                     linhas: [],
                   );
@@ -458,7 +460,7 @@ class _ListasPageState extends State<ListasPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Databank'),
+        title: const Text('Databank - Membros'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -493,7 +495,7 @@ class _ListasPageState extends State<ListasPage> {
                     leading: CircleAvatar(
                       backgroundColor: cor,
                       child: Icon(
-                        lista.isLocked ? Icons.lock : Icons.table_chart,
+                        lista.isLocked ? Icons.lock : Icons.people_alt,
                         color: Colors.white,
                       ),
                     ),
@@ -501,7 +503,7 @@ class _ListasPageState extends State<ListasPage> {
                       lista.titulo,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    subtitle: Text('${lista.linhas.length} registos | ${lista.colunas.length} colunas'),
+                    subtitle: Text('${lista.linhas.length} membros | ${lista.colunas.length} campos extras'),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -561,6 +563,7 @@ class DetalhesGrelhaPage extends StatefulWidget {
 
 class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
   final Uuid _uuid = const Uuid();
+  final ImagePicker _picker = ImagePicker();
 
   String _formatarDataHoraAtual() {
     final agora = DateTime.now();
@@ -600,13 +603,13 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            title: const Text('Nova Coluna'),
+            title: const Text('Novo Campo Personalizado'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: nomeController,
-                  decoration: const InputDecoration(labelText: 'Nome da Coluna'),
+                  decoration: const InputDecoration(labelText: 'Nome do Campo'),
                 ),
                 const SizedBox(height: 12),
                 DropdownButton<String>(
@@ -655,13 +658,13 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Gerenciar Coluna "${col.nome}"'),
+        title: Text('Gerenciar Campo "${col.nome}"'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: controller,
-              decoration: const InputDecoration(labelText: 'Novo Nome da Coluna'),
+              decoration: const InputDecoration(labelText: 'Novo Nome do Campo'),
             ),
           ],
         ),
@@ -671,14 +674,14 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
               setState(() {
                 widget.lista.colunas.removeWhere((c) => c.id == col.id);
                 for (var linha in widget.lista.linhas) {
-                  linha.valores.remove(col.id);
+                  linha.valoresAtributosDinamicos.remove(col.id);
                 }
               });
               widget.onSalvar();
               Navigator.pop(ctx);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Excluir Coluna'),
+            child: const Text('Excluir Campo'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -702,34 +705,235 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
     );
   }
 
-  void _adicionarLinha() {
+  void _abrirFormularioMembro({Entidade? membroExistente, int? indexExistente}) {
     if (widget.lista.isLocked) return;
 
-    final Map<String, String> novosValores = {};
+    final nomeCtrl = TextEditingController(text: membroExistente?.nome ?? '');
+    final cpfCtrl = TextEditingController(text: membroExistente?.cpf ?? '');
+    final rgCtrl = TextEditingController(text: membroExistente?.rg ?? '');
+    final idadeCtrl = TextEditingController(text: membroExistente?.idade ?? '');
+    final telCtrl = TextEditingController(text: membroExistente?.telefone ?? '');
+    final celCtrl = TextEditingController(text: membroExistente?.celular ?? '');
+    final emailCtrl = TextEditingController(text: membroExistente?.email ?? '');
+
+    String sexoSel = membroExistente?.sexo ?? 'N/A';
+    String sangueSel = membroExistente?.tipoSanguineo ?? 'N/A';
+    String? fotoBase64 = membroExistente?.fotoBase64;
+
+    final Map<String, String> atributosDinamicos = Map.from(membroExistente?.valoresAtributosDinamicos ?? {});
     for (var col in widget.lista.colunas) {
-      novosValores[col.id] = col.tipo == 'checkbox' ? 'false' : '';
+      atributosDinamicos.putIfAbsent(col.id, () => col.tipo == 'checkbox' ? 'false' : '');
     }
 
-    if (widget.lista.mostrarData || widget.lista.mostrarHora) {
-      novosValores['_dataHora'] = _formatarDataHoraAtual();
-    }
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setFormState) {
+          return AlertDialog(
+            title: Text(membroExistente == null ? 'Cadastrar Membro' : 'Editar Ficha do Membro'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+                      if (image != null) {
+                        final bytes = await image.readAsBytes();
+                        setFormState(() {
+                          fotoBase64 = base64Encode(bytes);
+                        });
+                      }
+                    },
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.grey.shade300,
+                      backgroundImage: fotoBase64 != null ? MemoryImage(base64Decode(fotoBase64!)) : null,
+                      child: fotoBase64 == null
+                          ? const Icon(Icons.add_a_photo, size: 30, color: Colors.grey)
+                          : null,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(controller: nomeCtrl, decoration: const InputDecoration(labelText: 'Nome Completo')),
+                  Row(
+                    children: [
+                      Expanded(child: TextField(controller: cpfCtrl, decoration: const InputDecoration(labelText: 'CPF'))),
+                      const SizedBox(width: 8),
+                      Expanded(child: TextField(controller: rgCtrl, decoration: const InputDecoration(labelText: 'RG'))),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(child: TextField(controller: idadeCtrl, decoration: const InputDecoration(labelText: 'Idade'), keyboardType: TextInputType.number)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: sexoSel,
+                          decoration: const InputDecoration(labelText: 'Sexo'),
+                          items: const [
+                            DropdownMenuItem(value: 'Masculino', child: Text('Masculino')),
+                            DropdownMenuItem(value: 'Feminino', child: Text('Feminino')),
+                            DropdownMenuItem(value: 'N/A', child: Text('N/A')),
+                          ],
+                          onChanged: (v) => setFormState(() => sexoSel = v!),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: sangueSel,
+                          decoration: const InputDecoration(labelText: 'Tipo Sanguíneo'),
+                          items: const ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'N/A'].map((s) {
+                            return DropdownMenuItem(value: s, child: Text(s));
+                          }).toList(),
+                          onChanged: (v) => setFormState(() => sangueSel = v!),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(child: TextField(controller: celCtrl, decoration: const InputDecoration(labelText: 'Celular'))),
+                    ],
+                  ),
+                  TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'E-mail')),
+                  const Divider(height: 24),
+                  const Text('Campos Personalizados:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ...widget.lista.colunas.map((col) {
+                    final currentVal = atributosDinamicos[col.id] ?? '';
+                    return TextField(
+                      decoration: InputDecoration(labelText: col.nome),
+                      controller: TextEditingController(text: currentVal),
+                      onChanged: (v) => atributosDinamicos[col.id] = v,
+                    );
+                  }),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              ElevatedButton(
+                onPressed: () {
+                  final nome = nomeCtrl.text.trim();
+                  if (nome.isEmpty) return;
+
+                  final novoMembro = Entidade(
+                    id: membroExistente?.id ?? _uuid.v4(),
+                    nome: nome,
+                    fotoBase64: fotoBase64,
+                    cpf: cpfCtrl.text.trim(),
+                    rg: rgCtrl.text.trim(),
+                    idade: idadeCtrl.text.trim(),
+                    sexo: sexoSel,
+                    tipoSanguineo: sangueSel,
+                    telefone: telCtrl.text.trim(),
+                    celular: celCtrl.text.trim(),
+                    email: emailCtrl.text.trim(),
+                    valoresAtributosDinamicos: atributosDinamicos,
+                  );
+
+                  setState(() {
+                    if (indexExistente != null) {
+                      widget.lista.linhas[indexExistente] = novoMembro;
+                    } else {
+                      widget.lista.linhas.add(novoMembro);
+                    }
+                  });
+                  widget.onSalvar();
+                  Navigator.pop(ctx);
+                },
+                child: const Text('Salvar Cadastro'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  void _excluirLinha(int index) {
+    if (widget.lista.isLocked) return;
 
     setState(() {
-      widget.lista.linhas.add(
-        Entidade(id: _uuid.v4(), valores: novosValores),
-      );
+      widget.lista.linhas.removeAt(index);
     });
     widget.onSalvar();
   }
 
-  Future<void> _exportarEImprimirPDF() async {
+  Future<void> _imprimirFichaMembro(Entidade membro) async {
     final pdf = pw.Document();
-
-    final headers = <String>[];
-    if (widget.lista.mostrarData || widget.lista.mostrarHora) {
-      headers.add('Data/Hora');
+    Uint8List? imageBytes;
+    if (membro.fotoBase64 != null) {
+      imageBytes = base64Decode(membro.fotoBase64!);
     }
-    headers.addAll(widget.lista.colunas.map((c) => c.nome));
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            cross: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Header(
+                level: 0,
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text('FICHA CADASTRAL DO MEMBRO', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('Databank', style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 16),
+              pw.Row(
+                cross: pw.CrossAxisAlignment.start,
+                children: [
+                  if (imageBytes != null)
+                    pw.Container(
+                      width: 90,
+                      height: 110,
+                      margin: const pw.EdgeInsets.only(right: 16),
+                      child: pw.Image(pw.MemoryImage(imageBytes)),
+                    ),
+                  pw.Expanded(
+                    child: pw.Column(
+                      cross: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Nome: ${membro.nome}', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 4),
+                        pw.Text('CPF: ${membro.cpf} | RG: ${membro.rg}'),
+                        pw.Text('Idade: ${membro.idade} | Sexo: ${membro.sexo}'),
+                        pw.Text('Tipo Sanguíneo: ${membro.tipoSanguineo}'),
+                        pw.Text('Celular: ${membro.celular} | E-mail: ${membro.email}'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 20),
+              pw.Divider(),
+              pw.Text('Especificações & Atributos Adicionais:', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 14)),
+              pw.SizedBox(height: 8),
+              ...widget.lista.colunas.map((col) {
+                final val = membro.valoresAtributosDinamicos[col.id] ?? '';
+                return pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 2),
+                  child: pw.Text('${col.nome}: $val'),
+                );
+              }),
+            ],
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
+  }
+
+  Future<void> _imprimirListaPresencaPDF() async {
+    final pdf = pw.Document();
+    final dataHoraSubtit = _formatarDataHoraAtual();
 
     pdf.addPage(
       pw.MultiPage(
@@ -738,20 +942,28 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
           return [
             pw.Header(
               level: 0,
-              child: pw.Text(widget.lista.titulo, style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('LISTA DE PRESENÇA - ${widget.lista.titulo}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+                  if (dataHoraSubtit.isNotEmpty)
+                    pw.Text(dataHoraSubtit, style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey700)),
+                ],
+              ),
             ),
-            pw.SizedBox(height: 10),
+            pw.SizedBox(height: 12),
             pw.Table.fromTextArray(
-              headers: headers,
-              data: widget.lista.linhas.map((linha) {
-                final rowData = <String>[];
-                if (widget.lista.mostrarData || widget.lista.mostrarHora) {
-                  rowData.add(linha.valores['_dataHora'] ?? '');
-                }
-                rowData.addAll(widget.lista.colunas.map((col) {
-                  return linha.valores[col.id] ?? '';
-                }));
-                return rowData;
+              headers: ['Nº', 'Nome do Membro', 'CPF / RG', 'Assinatura'],
+              data: widget.lista.linhas.asMap().entries.map((entry) {
+                final idx = entry.key + 1;
+                final m = entry.value;
+                final doc = m.cpf.isNotEmpty ? m.cpf : m.rg;
+                return [
+                  '$idx',
+                  m.nome,
+                  doc,
+                  '____________________________________',
+                ];
               }).toList(),
             ),
           ];
@@ -759,9 +971,7 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
       ),
     );
 
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => pdf.save(),
-    );
+    await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }
 
   void _exportarJSON() {
@@ -770,14 +980,9 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Exportar Dados (JSON)'),
-        content: SingleChildScrollView(
-          child: SelectableText(jsonStr),
-        ),
+        content: SingleChildScrollView(child: SelectableText(jsonStr)),
         actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Fechar'),
-          ),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Fechar')),
         ],
       ),
     );
@@ -786,18 +991,40 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
   @override
   Widget build(BuildContext context) {
     final corTema = widget.converterHex(widget.lista.corTema);
-    final incluirDataHora = widget.lista.mostrarData || widget.lista.mostrarHora;
+    final dataHoraStr = _formatarDataHoraAtual();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.lista.titulo),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    widget.lista.titulo,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (dataHoraStr.isNotEmpty) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '($dataHoraStr)',
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
         backgroundColor: corTema,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.print),
-            tooltip: 'Imprimir / Salvar PDF',
-            onPressed: _exportarEImprimirPDF,
+            icon: const Icon(Icons.assignment_turned_in),
+            tooltip: 'Lista de Presença (PDF)',
+            onPressed: _imprimirListaPresencaPDF,
           ),
           IconButton(
             icon: const Icon(Icons.code),
@@ -805,42 +1032,33 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
             onPressed: _exportarJSON,
           ),
           IconButton(
-            icon: const Icon(Icons.view_column),
-            tooltip: 'Adicionar Coluna',
+            icon: const Icon(Icons.add_card),
+            tooltip: 'Adicionar Campo Extra',
             onPressed: widget.lista.isLocked ? null : _adicionarColuna,
           ),
         ],
       ),
-      body: widget.lista.colunas.isEmpty
-          ? const Center(child: Text('Adicione colunas para começar a montar sua tabela.'))
+      body: widget.lista.linhas.isEmpty
+          ? const Center(child: Text('Nenhum membro cadastrado nesta lista.\nToque no botão + para adicionar.'))
           : SingleChildScrollView(
               scrollDirection: Axis.vertical,
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: DataTable(
                   headingRowColor: MaterialStateProperty.all(corTema.withOpacity(0.15)),
-                  border: TableBorder.all(
-                    color: corTema.withOpacity(0.4),
-                    width: 1,
-                  ),
+                  border: TableBorder.all(color: corTema.withOpacity(0.4), width: 1),
                   columns: [
-                    if (incluirDataHora)
-                      const DataColumn(
-                        label: Text(
-                          'Data/Hora',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                    const DataColumn(label: Text('Foto', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const DataColumn(label: Text('Nome', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const DataColumn(label: Text('CPF / RG', style: TextStyle(fontWeight: FontWeight.bold))),
+                    const DataColumn(label: Text('Contato', style: TextStyle(fontWeight: FontWeight.bold))),
                     ...widget.lista.colunas.map((col) {
                       return DataColumn(
                         label: InkWell(
                           onTap: () => _opcoesColuna(col),
                           child: Row(
                             children: [
-                              Text(
-                                col.nome,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
+                              Text(col.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
                               const SizedBox(width: 4),
                               const Icon(Icons.edit, size: 14, color: Colors.grey),
                             ],
@@ -848,76 +1066,51 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
                         ),
                       );
                     }),
+                    if (!widget.lista.isLocked)
+                      const DataColumn(label: Text('Ações', style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
-                  rows: widget.lista.linhas.map((linha) {
+                  rows: widget.lista.linhas.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final membro = entry.value;
+
                     return DataRow(
                       cells: [
-                        if (incluirDataHora)
+                        DataCell(
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: Colors.grey.shade300,
+                            backgroundImage: membro.fotoBase64 != null ? MemoryImage(base64Decode(membro.fotoBase64!)) : null,
+                            child: membro.fotoBase64 == null ? const Icon(Icons.person, size: 18) : null,
+                          ),
+                        ),
+                        DataCell(
+                          Text(membro.nome, style: const TextStyle(fontWeight: FontWeight.w500)),
+                          onTap: () => _abrirFormularioMembro(membroExistente: membro, indexExistente: index),
+                        ),
+                        DataCell(Text(membro.cpf.isNotEmpty ? membro.cpf : membro.rg)),
+                        DataCell(Text(membro.celular.isNotEmpty ? membro.celular : membro.email)),
+                        ...widget.lista.colunas.map((col) {
+                          final val = membro.valoresAtributosDinamicos[col.id] ?? '';
+                          return DataCell(Text(val.isEmpty ? '-' : val));
+                        }),
+                        if (!widget.lista.isLocked)
                           DataCell(
-                            Text(
-                              linha.valores['_dataHora'] ?? '',
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.badge_outlined, color: Colors.blue, size: 20),
+                                  tooltip: 'Imprimir Ficha Cadastral',
+                                  onPressed: () => _imprimirFichaMembro(membro),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                  tooltip: 'Excluir membro',
+                                  onPressed: () => _excluirLinha(index),
+                                ),
+                              ],
                             ),
                           ),
-                        ...widget.lista.colunas.map((col) {
-                          final val = linha.valores[col.id] ?? '';
-
-                          if (col.tipo == 'checkbox') {
-                            final isChecked = val.toLowerCase() == 'true';
-                            return DataCell(
-                              Checkbox(
-                                value: isChecked,
-                                activeColor: corTema,
-                                onChanged: widget.lista.isLocked
-                                    ? null
-                                    : (bool? nv) {
-                                        setState(() {
-                                          linha.valores[col.id] = (nv ?? false).toString();
-                                        });
-                                        widget.onSalvar();
-                                      },
-                              ),
-                            );
-                          }
-
-                          return DataCell(
-                            Text(val.isEmpty ? '-' : val),
-                            showEditIcon: !widget.lista.isLocked,
-                            onTap: widget.lista.isLocked
-                                ? null
-                                : () {
-                                    final controller = TextEditingController(text: val);
-                                    showDialog(
-                                      context: context,
-                                      builder: (ctx) => AlertDialog(
-                                        title: Text('Editar ${col.nome}'),
-                                        content: TextField(
-                                          controller: controller,
-                                          keyboardType: col.tipo == 'numero'
-                                              ? TextInputType.number
-                                              : TextInputType.text,
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed: () => Navigator.pop(ctx),
-                                            child: const Text('Cancelar'),
-                                          ),
-                                          ElevatedButton(
-                                            onPressed: () {
-                                              setState(() {
-                                                linha.valores[col.id] = controller.text;
-                                              });
-                                              widget.onSalvar();
-                                              Navigator.pop(ctx);
-                                            },
-                                            child: const Text('Salvar'),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                          );
-                        }),
                       ],
                     );
                   }).toList(),
@@ -925,9 +1118,9 @@ class _DetalhesGrelhaPageState extends State<DetalhesGrelhaPage> {
               ),
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: widget.lista.isLocked ? null : _adicionarLinha,
+        onPressed: widget.lista.isLocked ? null : () => _abrirFormularioMembro(),
         backgroundColor: widget.lista.isLocked ? Colors.grey : corTema,
-        child: const Icon(Icons.playlist_add, color: Colors.white),
+        child: const Icon(Icons.person_add, color: Colors.white),
       ),
     );
   }

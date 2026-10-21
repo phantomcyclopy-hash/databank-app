@@ -70,7 +70,7 @@ class ListaEntidades {
   String formatoData; // 'dd/mm/aaaa' ou 'mm/aaaa'
   bool mostrarHora;
   String formatoHora; // '12h' ou '24h'
-  String corTema; // 'azul', 'verde', 'roxo', 'cinza'
+  String corTema; // 'azul', 'verde', 'roxo', 'cinza', 'laranja', 'rosa'
   bool isLocked;
   List<ColunaEspecificacao> colunas;
   List<Entidade> linhas;
